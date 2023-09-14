@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using ZubrServer.DB;
-using ZubrServer.DB.DBObjects;
+using NSK_WebAPI.DB;
+using NSK_WebAPI.DB.DBObjects;
 
 namespace NSK_WebAPI.Controllers
 {
@@ -14,13 +14,15 @@ namespace NSK_WebAPI.Controllers
         {
             _logger = logger;
         }
-        
-        private DatabaseContext db = new(); //Нужно протестить на лайфтайм, почему бы не юзать один контекст для всех запросов? Многопоточность... Конечно же.
 
         [HttpGet(Name = "GetUsers")]
-        public IEnumerable<User> Get()
+        public IEnumerable<User> Get() // Охренеть ты коллекционер
         {
-            return db.Users;
+            var db = DatabaseContext.LockContext();
+            var users = db.Users;
+            DatabaseContext.ReleaseContext();
+
+            return users;
         }
     }
 }

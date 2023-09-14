@@ -1,14 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ZubrServer.DB.DBObjects;
+namespace NSK_WebAPI.DB.DBObjects;
 public class Transportation
 {
-    public int transId { get; set; }
-    public int autoId { get; set; } // -> Auto.autoId
-    public int employeeId { get; set; } // -> Employee.employeeId
-    public DateTime date { get; set; }
+    [Key]
+    public int TransportationId { get; set; }
+
+    public int AutoId { get; set; } // -> Auto.AutoId
+    [ForeignKey("AutoId")]
+    public Auto Auto { get; set; }
+
+    public int UserId { get; set; } // -> User.UserId
+    [ForeignKey("UserId")]
+    public User User { get; set; }
+
+    public DateTime Date { get; set; }
 }

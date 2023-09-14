@@ -6,9 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace NSK_WebAPI.DB.DBObjects;
-public class State
+public class CardType
 {
     [Key]
-    public int StateId { get; set; }
-    public string StateName { get; set; }
+    public int CardTypeId { get; set; }
+    public string Type { get; set; }
 }

@@ -1,4 +1,4 @@
-using ZubrServer.DB;
+using NSK_WebAPI.DB;
 
 namespace NSK_WebAPI
 {
@@ -6,7 +6,7 @@ namespace NSK_WebAPI
     {
         public static void Main(string[] args)
         {
-            var test = new DatabaseContext();
+            
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.

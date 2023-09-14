@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ZubrServer.DB.DBObjects;
+namespace NSK_WebAPI.DB.DBObjects;
 public class Auto
 {
-    public int autoId { get; set; }
-    public string autoNumber { get; set; }
+    [Key]
+    public int AutoId { get; set; }
+    public string AutoNumber { get; set; }
 }
