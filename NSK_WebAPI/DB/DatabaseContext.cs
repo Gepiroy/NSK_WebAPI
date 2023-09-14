@@ -19,20 +19,23 @@ namespace ZubrServer.DB
         public DbSet<State> States { get; set; } = null!;
         public DbSet<Card> Cards { get; set; } = null!;
         public DbSet<Partner> Partners { get; set; } = null!;
-        public DbSet<PartnerRole> PartnersRoles { get; set; } = null!;*/ //Causes errors when primary key is not choosed.
+        public DbSet<PartnerRole> PartnersRoles { get; set; } = null!;*/ //Causes errors when primary key is not chosen.
 
         public DatabaseContext()
         {
             Database.EnsureCreated();
+            
+            Console.WriteLine("gfdsfdsxmghfdd");
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder){
+            base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<User>()
                 .Property(p => p.Id)
                 .ValueGeneratedOnAdd(); //Primary keys adding. Probably there's more options like references and defaults, but IDK for now.
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=пароль_от_postgres");
+            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=");
         }
     }
 }
