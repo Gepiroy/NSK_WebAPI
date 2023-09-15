@@ -1,12 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace NSK_WebAPI.DB.DBObjects;
 
+[PrimaryKey("TokenGroupId")]
 public class TokenGroup
 {
-    [Key]
-    public int Id { get; set; } //Тупо уникальный номер, чтобы записи отличаться умели.
-    [Key]
     public int TokenGroupId { get; set; }
-    public string Permission { get; set; }
+    public string TokenGroupTitle { get; set; }
 }

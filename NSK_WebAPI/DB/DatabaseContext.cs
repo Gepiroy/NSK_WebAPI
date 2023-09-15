@@ -13,9 +13,9 @@ namespace NSK_WebAPI.DB
         public static void Init()
         {
             var db = new DatabaseContext();
-#if DEBUG
+/*#if DEBUG
             db.Database.EnsureDeleted();
-#endif
+#endif*/
 
             var exists = db.Database.EnsureCreated();
             
@@ -25,30 +25,16 @@ namespace NSK_WebAPI.DB
             }
         }
 
-        /*public static DatabaseContext LockContext()
-        {
-            Monitor.Enter(globalDbContext);
-            return globalDbContext;
-        }
-
-        public static void ReleaseContext()
-        {
-            if(Monitor.IsEntered(globalDbContext))
-            {
-                Monitor.Pulse(globalDbContext);
-                Monitor.Exit(globalDbContext);
-            }
-        }*/
-
         public DbSet<User> Users { get; set; }
         /*public DbSet<Travel> Travels { get; set; }
         public DbSet<Transportation> Transportations { get; set; }
         public DbSet<Auto> Autos { get; set; }
         public DbSet<State> States { get; set; }
         public DbSet<Card> Cards { get; set; }
-        public DbSet<CardType> CardTypes { get; set; }
+        public DbSet<CardType> CardTypes { get; set; }*/
         public DbSet<Token> Tokens { get; set; }
-        public DbSet<TokenPermission> TokenPermissions { get; set; }*/
+        public DbSet<TokenGroup> TokenGroups { get; set; }
+        public DbSet<TokenGroupPermission> TokenGroupPermissions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder){
             base.OnModelCreating(modelBuilder);
@@ -84,34 +70,47 @@ namespace NSK_WebAPI.DB
 
             //modelBuilder.Entity<Token>()
             //    .HasKey(token => new { token.TokenString, token.TokenPermissionId });
+
+            //modelBuilder.Entity<Token>()
+            //    .HasOne(token => token.TokenGroup)
+            //    .WithMany()
+            //    .HasForeignKey(token => token.TokenGroupTitle)
+            //    .OnDelete(DeleteBehavior.Restrict);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=");
         }
-        
-        /**
+
+        /*
          * Всё что здесь - должно быть синхронно. Сам метод лежит в отдельном потоке.
          */
+
         public static void Execute(Action<DatabaseContext> action)
         {
             var db = new DatabaseContext();
             action(db);
             db.Dispose();
         }
+
         public static T ExecuteAndReturn<T>(Func<DatabaseContext, T> action)
         {
             var db = new DatabaseContext();
+
             try
             {
-                return action(db);
+                db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+
+                var result = action(db);
+                return result;
             }
             finally
             {
-                db.Dispose();
+                //db.Dispose();
             }
         }
+
         public static void ExecuteAsync(Action<DatabaseContext> action)
         {
             Execute(action); //TODO Асинхрон реализуем здесь позже. Он не нужен для запросов типа Get, поэтому разделил.
