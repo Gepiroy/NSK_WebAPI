@@ -6,6 +6,9 @@ namespace NSK_WebAPI
     {
         public static void Main(string[] args)
         {
+            DatabaseContext.Init();
+            
+            //App building must be after local initializations.
             
             var builder = WebApplication.CreateBuilder(args);
 

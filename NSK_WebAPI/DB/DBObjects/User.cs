@@ -12,23 +12,13 @@ public class User
 {
     [Key]
     public int UserId { get; set; }
-    public string CardNumber { get; set; }
-    public string FirstName { get; set; }
-    public string MiddleName { get; set; }
-    public string LastName { get; set; }
+    //CardNumber не нужен, т.к. генерируется из id и в него же дешифруется. Поиск по id гораздо эффективнее чем по номеру карты, второй никогда не будет применён.
+    public string FirstName { get; set; } //Имя
+    public string LastName { get; set; } //Фамилия
+    public string Patronymic { get; set; } //Отчество. Вписать сюда MiddleName - приведёт к человеческим ошибкам с большей вероятностью, чем Patronymic, т.к. мозг не участвует.
     public string PhoneNumber { get; set; } // nullable
     public string Email { get; set; } // nullable
     public string PassHash { get; set; } // nullable
 
-    public string TokenString { get; set; } // -> Token.TokenString
-    [ForeignKey("TokenString")]
-    public Token Token { get; set; }
-
-    public string GroupId { get; set; } // -> Group.GroupId
-    [ForeignKey("GroupId")]
-    public Group Group { get; set; }
-
-    public string StateId { get; set; } // -> State.StateId
-    [ForeignKey("StateId")]
-    public State State { get; set; }
+    public bool IsFrozen { get; set; } //Нет никаких состояний кроме "заморожена / не заморожена"
 }

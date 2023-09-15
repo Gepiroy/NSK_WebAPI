@@ -10,7 +10,12 @@ namespace NSK_WebAPI.DB
 {
     public class DatabaseContext : DbContext
     {
-        private static DatabaseContext globalDbContext = new();
+        private static DatabaseContext globalDbContext;
+
+        public static void Init()
+        {
+            globalDbContext = new();
+        }
 
         // Теперь можно юзать один контекст всем))
 
@@ -24,20 +29,20 @@ namespace NSK_WebAPI.DB
         {
             if(Monitor.IsEntered(globalDbContext))
             {
-                Monitor.Exit(globalDbContext);
                 Monitor.Pulse(globalDbContext);
+                Monitor.Exit(globalDbContext);
             }
         }
 
         public DbSet<User> Users { get; set; }
-        public DbSet<Travel> Travels { get; set; }
+        /*public DbSet<Travel> Travels { get; set; }
         public DbSet<Transportation> Transportations { get; set; }
         public DbSet<Auto> Autos { get; set; }
         public DbSet<State> States { get; set; }
         public DbSet<Card> Cards { get; set; }
         public DbSet<CardType> CardTypes { get; set; }
         public DbSet<Token> Tokens { get; set; }
-        public DbSet<TokenPermission> TokenPermissions { get; set; }
+        public DbSet<TokenPermission> TokenPermissions { get; set; }*/
 
         public DatabaseContext()
         {
@@ -55,7 +60,7 @@ namespace NSK_WebAPI.DB
 
         protected override void OnModelCreating(ModelBuilder modelBuilder){
             base.OnModelCreating(modelBuilder);
-
+            
             // Primary keys and value generators
 
             //modelBuilder.Entity<User>()
@@ -66,7 +71,7 @@ namespace NSK_WebAPI.DB
 
             //modelBuilder.Entity<Travel>()
             //    .HasKey(travel => travel.TravelId);
-            modelBuilder.Entity<Travel>()
+            /*modelBuilder.Entity<Travel>()
                 .Property(p => p.TravelId)
                 .ValueGeneratedOnAdd();
 
@@ -80,7 +85,7 @@ namespace NSK_WebAPI.DB
             //    .HasKey(auto => auto.AutoId);
             modelBuilder.Entity<Auto>()
                 .Property(p => p.AutoId)
-                .ValueGeneratedOnAdd();
+                .ValueGeneratedOnAdd();*/
 
             //modelBuilder.Entity<Card>()
             //    .HasKey(card => new { card.UserId, card.CardNumber });

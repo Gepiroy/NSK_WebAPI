@@ -16,13 +16,23 @@ namespace NSK_WebAPI.Controllers
         }
 
         [HttpGet(Name = "GetUsers")]
-        public IEnumerable<User> Get() // Охренеть ты коллекционер
+        public IEnumerable<User> GetUsers() // Охренеть ты коллекционер
         {
             var db = DatabaseContext.LockContext();
             var users = db.Users;
             DatabaseContext.ReleaseContext();
 
             return users;
+        }
+        
+        [HttpGet, Route("GetUser/{userid}")]
+        public User GetUser(int userid)
+        {
+            var db = DatabaseContext.LockContext();
+            var user = db.Users.First(u => u.UserId==userid);
+            DatabaseContext.ReleaseContext();
+
+            return user;
         }
     }
 }
