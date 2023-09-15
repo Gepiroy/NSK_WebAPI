@@ -16,9 +16,12 @@ public class User
     public string FirstName { get; set; } //Имя
     public string LastName { get; set; } //Фамилия
     public string Patronymic { get; set; } //Отчество. Вписать сюда MiddleName - приведёт к человеческим ошибкам с большей вероятностью, чем Patronymic, т.к. мозг не участвует.
-    public string PhoneNumber { get; set; } // nullable
-    public string Email { get; set; } // nullable
-    public string PassHash { get; set; } // nullable
-
-    public bool IsFrozen { get; set; } //Нет никаких состояний кроме "заморожена / не заморожена"
+    [DataType(DataType.Date)]
+    [Column(TypeName = "date")] 
+    public DateTime BirthDay { get; set; } //Must be happy :3
+    public string? PhoneNumber { get; set; } // nullable
+    public string? Email { get; set; } // nullable
+    public string? PassHash { get; set; } // nullable
+    
+    public bool IsFrozen { get; set; } = false; //Нет никаких состояний кроме "заморожена / не заморожена"
 }

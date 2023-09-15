@@ -10,16 +10,22 @@ namespace NSK_WebAPI.DB
 {
     public class DatabaseContext : DbContext
     {
-        private static DatabaseContext globalDbContext;
-
         public static void Init()
         {
-            globalDbContext = new();
+            var db = new DatabaseContext();
+#if DEBUG
+            db.Database.EnsureDeleted();
+#endif
+
+            var exists = db.Database.EnsureCreated();
+            
+            if(!exists)
+            {
+                // TODO: логика для первичного заполнения вспомогательных табличек
+            }
         }
 
-        // Теперь можно юзать один контекст всем))
-
-        public static DatabaseContext LockContext()
+        /*public static DatabaseContext LockContext()
         {
             Monitor.Enter(globalDbContext);
             return globalDbContext;
@@ -32,7 +38,7 @@ namespace NSK_WebAPI.DB
                 Monitor.Pulse(globalDbContext);
                 Monitor.Exit(globalDbContext);
             }
-        }
+        }*/
 
         public DbSet<User> Users { get; set; }
         /*public DbSet<Travel> Travels { get; set; }
@@ -43,20 +49,6 @@ namespace NSK_WebAPI.DB
         public DbSet<CardType> CardTypes { get; set; }
         public DbSet<Token> Tokens { get; set; }
         public DbSet<TokenPermission> TokenPermissions { get; set; }*/
-
-        public DatabaseContext()
-        {
-            #if DEBUG
-                Database.EnsureDeleted();
-            #endif
-
-            var exists = Database.EnsureCreated();
-
-            if(!exists)
-            {
-                // TODO: логика для первичного заполнения вспомогательных табличек
-            }
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder){
             base.OnModelCreating(modelBuilder);
@@ -97,6 +89,33 @@ namespace NSK_WebAPI.DB
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=");
+        }
+        
+        /**
+         * Всё что здесь - должно быть синхронно. Сам метод лежит в отдельном потоке.
+         */
+        public static void Execute(Action<DatabaseContext> action)
+        {
+            var db = new DatabaseContext();
+            action(db);
+            db.Dispose();
+        }
+        public static T ExecuteAndReturn<T>(Func<DatabaseContext, T> action)
+        {
+            var db = new DatabaseContext();
+            try
+            {
+                return action(db);
+            }
+            finally
+            {
+                db.Dispose();
+            }
+        }
+        public static void ExecuteAsync(Action<DatabaseContext> action)
+        {
+            Execute(action); //TODO Асинхрон реализуем здесь позже. Он не нужен для запросов типа Get, поэтому разделил.
+            //Кстати, а сами методы гетов/путов случайно не асинхронно вызываются?
         }
     }
 }
