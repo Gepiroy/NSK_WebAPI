@@ -26,36 +26,35 @@ namespace NSK_WebAPI.Controllers
         [HttpGet(Name = "GetUsers")]
         public ActionResult<IEnumerable<User>> GetUsers([FromHeader(Name="Token")] string token) // Охренеть ты коллекционер
         {
-            if(token == "") return Unauthorized();
-            var dbToken = DatabaseContext.ExecuteAndReturn(db => db.Tokens.Where(t => t.TokenString == token));
-
-            if(dbToken.Count() == 0) return Unauthorized();
-            
-            var firstToken = dbToken.First();
-
-            var permissions = DatabaseContext.ExecuteAndReturn(db =>
-            {
-                var permissions = db.TokenGroupPermissions.Where(p => p.TokenGroupId == firstToken.TokenGroupId);
-                return permissions.ToList();
-            });
-
-            if(permissions.Any(p => p.Permission == "ReadOthers"))
-            {
-                var users = DatabaseContext.ExecuteAndReturn(db => db.Users);
-                return users;
-            }
-            else
-            {
-                return Forbid();
-            }
+            return DatabaseContext.ExecuteAndReturnWithPermissions(db => db.Users as IEnumerable<User>, token, "ReadOthers");
         }
         
         [HttpGet, Route("GetUser/{userId}")]
-        public User GetUser(int userId)
+        public ActionResult<User> GetUser([FromRoute(Name="userId")]int userId, [FromHeader(Name="Token")] string token)
         {
-            User user = null;
-            DatabaseContext.Execute(db => { user = db.Users.First(u => u.UserId == userId); });
-            return user;
+            User user;
+            var foundUser = DatabaseContext.ExecuteAndReturnWithPermissions(db => db.Users.Where(u => u.UserId == userId), token, "ReadOthers");
+            
+            if(foundUser.Result is not null and not OkResult)
+            {
+                var dbToken = DatabaseContext.ExecuteAndReturnWithPermissions(db => db.Tokens.First(t => t.TokenString == token && t.UserId != null), token, "ReadSelf");
+                if(dbToken.Result is not null and not OkResult || dbToken.Value is null)
+                {
+                    return new ActionResult<User>(new ForbidResult());
+                }
+                else
+                {
+                    return new ActionResult<User>(DatabaseContext.ExecuteAndReturn(db => db.Users.First(u => u.UserId == dbToken.Value.UserId)));
+                }
+            }
+            else if(!foundUser.Value.Any())
+            {
+                return new ActionResult<User>(new NotFoundResult());
+            }
+            else
+            {
+                return new ActionResult<User>(foundUser.Value.First());
+            }
         }
         
         [HttpPut, Route("RegisterUser")]

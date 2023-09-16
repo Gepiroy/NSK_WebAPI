@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 
 using NSK_WebAPI.DB.DBObjects;
+using Microsoft.AspNetCore.Mvc;
+
 namespace NSK_WebAPI.DB
 {
     public class DatabaseContext : DbContext
@@ -87,6 +89,59 @@ namespace NSK_WebAPI.DB
          * Всё что здесь - должно быть синхронно. Сам метод лежит в отдельном потоке.
          */
 
+        public static ActionResult ExecuteWithPermissions<T>(Action<DatabaseContext> action, string token, params string[] permissions)
+        {
+            var permission = CheckPermissions(token, permissions);
+            if(!permission.authorized) return new UnauthorizedResult();
+
+            if(permission.permissions)
+            {
+                Execute(action);
+                return new OkResult();
+            }
+            else
+            {
+                return new ForbidResult();
+            }
+        }
+
+        public static ActionResult<T> ExecuteAndReturnWithPermissions<T>(Func<DatabaseContext, T> action, string token, params string[] permissions)
+        {
+            var permission = CheckPermissions(token, permissions);
+            if(!permission.authorized) return new UnauthorizedResult();
+
+            if(permission.permissions)
+            {
+                return new ActionResult<T>(ExecuteAndReturn(action));
+            }
+            else
+            {
+                return new ForbidResult();
+            }
+        }
+
+        public static (bool authorized, bool permissions) CheckPermissions(string token, params string[] permissions)
+        {
+            var result = false;
+
+            if(string.IsNullOrWhiteSpace(token)) return (false, result);
+
+            var dbToken = ExecuteAndReturn(db => db.Tokens.Where(t => t.TokenString == token));
+            if(!dbToken.Any()) return (false, result);
+            var singleToken = dbToken.First();
+
+            var dbPermissions = ExecuteAndReturn(db => db.TokenGroupPermissions
+                .Where(p => p.TokenGroupId == singleToken.TokenGroupId)
+                .Select(p => p.Permission).ToList());
+
+            for(var i = 0; i < permissions.Length; i++)
+            {
+                result = result && dbPermissions.Contains(permissions[i]);
+            }
+
+            return (true, result);
+        }
+
         public static void Execute(Action<DatabaseContext> action)
         {
             var db = new DatabaseContext();
@@ -100,8 +155,7 @@ namespace NSK_WebAPI.DB
 
             try
             {
-                db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-
+                //db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
                 var result = action(db);
                 return result;
             }
