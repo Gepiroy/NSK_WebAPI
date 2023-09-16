@@ -24,17 +24,18 @@ namespace NSK_WebAPI.DB
             
             if(justCreated)
             {
-                Console.WriteLine("Database is just created. Filling it with start data.");
                 // Lогика для первичного заполнения вспомогательных табличек
-                db.Users.Add(new User { FirstName = "Peter", LastName = "Parker", Patronymic = "Spiderovich", BirthDay = DateTime.Today-TimeSpan.FromDays(19*365), PassHash = UsersController.MakeHash("123456")});
-                db.Users.Add(new User { FirstName = "Harry", LastName = "Potter", Patronymic = "Hermionich", BirthDay = DateTime.Today-TimeSpan.FromDays(12*365), PassHash = UsersController.MakeHash("123456")});
-                db.Users.Add(new User { FirstName = "Maxim", LastName = "Ded", Patronymic = "Pomerovich", BirthDay = DateTime.Today-TimeSpan.FromDays(84*365), PassHash = UsersController.MakeHash("123456")});
+                
                 var groupAdmin = new TokenGroup { TokenGroupTitle = "Admin" };
                 db.TokenGroups.Add(groupAdmin);
                 db.TokenGroupPermissions.Add(new TokenGroupPermission {TokenGroup = groupAdmin, Permission = Permissions.PERM_ADMIN});
                 db.Tokens.Add(new Token {TokenString = "admin", TokenGroup = groupAdmin});
 
                 db.SaveChanges();
+                
+                LocalDBAPI.RegisterUser(new User { FirstName = "Peter", LastName = "Parker", Patronymic = "Spiderovich", Email = "spiderman@mail.ru", BirthDay = DateTime.Today-TimeSpan.FromDays(19*365), PassHash = UsersController.MakeHash("123456")});
+                LocalDBAPI.RegisterUser(new User { FirstName = "Harry", LastName = "Potter", Patronymic = "Hermionich", Email = "harry@hogvartz.ru", BirthDay = DateTime.Today-TimeSpan.FromDays(12*365), PassHash = UsersController.MakeHash("123456")});
+                LocalDBAPI.RegisterUser(new User { FirstName = "Maxim", LastName = "Ded", Patronymic = "Pomerovich", PhoneNumber = "8-800-555-35-35", BirthDay = DateTime.Today-TimeSpan.FromDays(84*365), PassHash = UsersController.MakeHash("123456")});
             }
         }
 

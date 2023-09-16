@@ -85,6 +85,21 @@ namespace NSK_WebAPI.Controllers
             if (result.Length > 0) return Conflict(result);
             return Ok();
         }
+        [HttpPost, Route("LoginUser")]
+        public ActionResult<string> LoginUser([FromBody]RequestLoginByPassword data)
+        {
+            var tokenString = DatabaseContext.ExecuteAndReturn(db =>
+            {
+                User? user = null;
+                if(data.Phone!=null)user = db.Users.FirstOrDefault(u => u.PhoneNumber == data.Phone && u.PassHash == MakeHash(data.Password));
+                else if(data.Email!=null)user = db.Users.FirstOrDefault(u => u.Email == data.Email && u.PassHash == MakeHash(data.Password));
+                //Сверху лучше не скипать, т.к. при теоретическом существовании юзера без того и другого соответственный запрос залогинит за него
+                if (user is null) return null;
+                return db.Tokens.FirstOrDefault(t => t.UserId == user.UserId)?.TokenString;
+            });
+            if (tokenString is null) return new NotFoundResult();
+            return new ActionResult<string>(tokenString);
+        }
         [HttpPost, Route("UpdateUser/{userId}")]
         public ActionResult UpdateUser(int userId, [FromBody]RequestUpdateUser data)
         {
