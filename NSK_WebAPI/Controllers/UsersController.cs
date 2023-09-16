@@ -24,37 +24,30 @@ namespace NSK_WebAPI.Controllers
         /// <param name="token"></param>
         /// <returns>The list of users.</returns>
         [HttpGet(Name = "GetUsers")]
-        public ActionResult<IEnumerable<User>> GetUsers([FromHeader(Name="Token")] string token) // Охренеть ты коллекционер
+        public ActionResult<IEnumerable<User>> GetUsers([FromHeader(Name="Token")] string tokenString)
         {
-            return DatabaseContext.ExecuteAndReturnWithPermissions(db => db.Users as IEnumerable<User>, token, "ReadOthers");
+            return DatabaseContext.ExecuteAndReturn((db, _) => new ActionResult<IEnumerable<User>>(db.Users), tokenString, "ReadOthers");
         }
         
         [HttpGet, Route("GetUser/{userId}")]
-        public ActionResult<User> GetUser([FromRoute(Name="userId")]int userId, [FromHeader(Name="Token")] string token)
+        public ActionResult<User> GetUser([FromRoute(Name="userId")]int userId, [FromHeader(Name="Token")] string tokenString)
         {
-            User user;
-            var foundUser = DatabaseContext.ExecuteAndReturnWithPermissions(db => db.Users.Where(u => u.UserId == userId), token, "ReadOthers");
+            var foundUser = DatabaseContext.ExecuteAndReturn((db, token) =>
+            {
+                if (!Permissions.CanGetUser(db, userId, token)) return new ForbidResult();
+                return new ActionResult<User>(db.Users.FirstOrDefault(u => u.UserId == userId));
+            }, tokenString);
             
-            if(foundUser.Result is not null and not OkResult)
+            Console.WriteLine("foundUser is "+foundUser+", its result is "+foundUser.Result+", its value is "+foundUser.Value);
+            if (foundUser.Result is not null) return foundUser.Result;
+            if(foundUser.Value is null)
             {
-                var dbToken = DatabaseContext.ExecuteAndReturnWithPermissions(db => db.Tokens.First(t => t.TokenString == token && t.UserId != null), token, "ReadSelf");
-                if(dbToken.Result is not null and not OkResult || dbToken.Value is null)
-                {
-                    return new ActionResult<User>(new ForbidResult());
-                }
-                else
-                {
-                    return new ActionResult<User>(DatabaseContext.ExecuteAndReturn(db => db.Users.First(u => u.UserId == dbToken.Value.UserId)));
-                }
-            }
-            else if(!foundUser.Value.Any())
-            {
+                Console.WriteLine("foundUser is null");
                 return new ActionResult<User>(new NotFoundResult());
             }
-            else
-            {
-                return new ActionResult<User>(foundUser.Value.First());
-            }
+            Console.WriteLine("returning it");
+            
+            return foundUser;
         }
         
         [HttpPut, Route("RegisterUser")]
@@ -132,7 +125,7 @@ namespace NSK_WebAPI.Controllers
             return Ok();
         }
 
-        string MakeHash(string password)
+        public static string MakeHash(string password)
         {
             return password; //TODO hash-функцию завезём позже. И соль в структуру БД... Хотя смысла в этом вижу мало.
         }

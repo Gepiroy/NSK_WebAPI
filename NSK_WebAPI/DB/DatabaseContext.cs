@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using NSK_WebAPI.DB.DBObjects;
 using Microsoft.AspNetCore.Mvc;
+using NSK_WebAPI.Controllers;
 
 namespace NSK_WebAPI.DB
 {
@@ -15,15 +16,25 @@ namespace NSK_WebAPI.DB
         public static void Init()
         {
             var db = new DatabaseContext();
-/*#if DEBUG
+#if DEBUG
             db.Database.EnsureDeleted();
-#endif*/
+#endif
 
-            var exists = db.Database.EnsureCreated();
+            var justCreated = db.Database.EnsureCreated();
             
-            if(!exists)
+            if(justCreated)
             {
-                // TODO: логика для первичного заполнения вспомогательных табличек
+                Console.WriteLine("Database is just created. Filling it with start data.");
+                // Lогика для первичного заполнения вспомогательных табличек
+                db.Users.Add(new User { FirstName = "Peter", LastName = "Parker", Patronymic = "Spiderovich", BirthDay = DateTime.Today-TimeSpan.FromDays(19*365), PassHash = UsersController.MakeHash("123456")});
+                db.Users.Add(new User { FirstName = "Harry", LastName = "Potter", Patronymic = "Hermionich", BirthDay = DateTime.Today-TimeSpan.FromDays(12*365), PassHash = UsersController.MakeHash("123456")});
+                db.Users.Add(new User { FirstName = "Maxim", LastName = "Ded", Patronymic = "Pomerovich", BirthDay = DateTime.Today-TimeSpan.FromDays(84*365), PassHash = UsersController.MakeHash("123456")});
+                var groupAdmin = new TokenGroup { TokenGroupTitle = "Admin" };
+                db.TokenGroups.Add(groupAdmin);
+                db.TokenGroupPermissions.Add(new TokenGroupPermission {TokenGroup = groupAdmin, Permission = Permissions.PERM_ADMIN});
+                db.Tokens.Add(new Token {TokenString = "admin", TokenGroup = groupAdmin});
+
+                db.SaveChanges();
             }
         }
 
@@ -41,38 +52,24 @@ namespace NSK_WebAPI.DB
         protected override void OnModelCreating(ModelBuilder modelBuilder){
             base.OnModelCreating(modelBuilder);
             
-            // Primary keys and value generators
+            // Value generators
 
-            //modelBuilder.Entity<User>()
-            //    .HasKey(user => user.UserId); //Primary keys adding. Probably there's more options like references and defaults, but IDK for now. // actually it's ”constraints” not “references” when speaking about DBs <3
             modelBuilder.Entity<User>()
                 .Property(user => user.UserId)
                 .ValueGeneratedOnAdd();
 
-            //modelBuilder.Entity<Travel>()
-            //    .HasKey(travel => travel.TravelId);
             /*modelBuilder.Entity<Travel>()
                 .Property(p => p.TravelId)
                 .ValueGeneratedOnAdd();
 
-            //modelBuilder.Entity<Transportation>()
-            //    .HasKey(transportation => transportation.TransportationId);
             modelBuilder.Entity<Transportation>()
                 .Property(p => p.TransportationId)
                 .ValueGeneratedOnAdd();
 
-            //modelBuilder.Entity<Auto>()
-            //    .HasKey(auto => auto.AutoId);
             modelBuilder.Entity<Auto>()
                 .Property(p => p.AutoId)
                 .ValueGeneratedOnAdd();*/
-
-            //modelBuilder.Entity<Card>()
-            //    .HasKey(card => new { card.UserId, card.CardNumber });
-
-            //modelBuilder.Entity<Token>()
-            //    .HasKey(token => new { token.TokenString, token.TokenPermissionId });
-
+            
             //modelBuilder.Entity<Token>()
             //    .HasOne(token => token.TokenGroup)
             //    .WithMany()
@@ -85,64 +82,6 @@ namespace NSK_WebAPI.DB
             optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=");
         }
 
-        /*
-         * Всё что здесь - должно быть синхронно. Сам метод лежит в отдельном потоке.
-         */
-
-        public static ActionResult ExecuteWithPermissions<T>(Action<DatabaseContext> action, string token, params string[] permissions)
-        {
-            var permission = CheckPermissions(token, permissions);
-            if(!permission.authorized) return new UnauthorizedResult();
-
-            if(permission.permissions)
-            {
-                Execute(action);
-                return new OkResult();
-            }
-            else
-            {
-                return new ForbidResult();
-            }
-        }
-
-        public static ActionResult<T> ExecuteAndReturnWithPermissions<T>(Func<DatabaseContext, T> action, string token, params string[] permissions)
-        {
-            var permission = CheckPermissions(token, permissions);
-            if(!permission.authorized) return new UnauthorizedResult();
-
-            if(permission.permissions)
-            {
-                return new ActionResult<T>(ExecuteAndReturn(action));
-            }
-            else
-            {
-                return new ForbidResult();
-            }
-        }
-
-        public static (bool authorized, bool permissions) CheckPermissions(string token, params string[] permissions)
-        {
-            var result = false;
-
-            if(string.IsNullOrWhiteSpace(token)) return (false, result);
-
-            var dbToken = ExecuteAndReturn(db => db.Tokens.Where(t => t.TokenString == token));
-            if(!dbToken.Any()) return (false, result);
-            var singleToken = dbToken.First();
-
-            var dbPermissions = ExecuteAndReturn(db => db.TokenGroupPermissions
-                .Where(p => p.TokenGroupId == singleToken.TokenGroupId)
-                .Select(p => p.Permission).ToList());
-
-            result = true;
-            for(var i = 0; i < permissions.Length; i++)
-            {
-                result = result && dbPermissions.Contains(permissions[i]);
-            }
-
-            return (true, result);
-        }
-
         public static void Execute(Action<DatabaseContext> action)
         {
             var db = new DatabaseContext();
@@ -150,26 +89,38 @@ namespace NSK_WebAPI.DB
             db.Dispose();
         }
 
+        public static ActionResult Execute(Func<DatabaseContext, Token, ActionResult> action, string tokenString, params string[] permissions)
+        {
+            var db = new DatabaseContext();
+            var token = Permissions.TokenFromString(db, tokenString);
+            if (token is null) return new UnauthorizedResult();
+            if(!Permissions.CheckPermissions(db, token, permissions))return new ForbidResult();
+            return action(db, token);
+        }
+
         public static T ExecuteAndReturn<T>(Func<DatabaseContext, T> action)
         {
             var db = new DatabaseContext();
-
-            try
-            {
-                //db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-                var result = action(db);
-                return result;
-            }
-            finally
-            {
-                //db.Dispose();
-            }
+            //db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
+            return action(db);
         }
-
-        public static void ExecuteAsync(Action<DatabaseContext> action)
+        public static ActionResult<T> ExecuteAndReturn<T>(Func<DatabaseContext, Token, ActionResult<T>> action, string tokenString, params string[] permissions)
         {
-            Execute(action); //TODO Асинхрон реализуем здесь позже. Он не нужен для запросов типа Get, поэтому разделил.
-            //Кстати, а сами методы гетов/путов случайно не асинхронно вызываются?
+            var db = new DatabaseContext();
+            var token = Permissions.TokenFromString(db, tokenString);
+            if (token is null)
+            {
+                Console.WriteLine("not found token "+tokenString);
+                return new UnauthorizedResult();
+            }
+
+            if (!Permissions.CheckPermissions(db, token, permissions))
+            {
+                Console.WriteLine("permissions denied for "+tokenString);
+                return new ForbidResult();
+            }
+            Console.WriteLine("success basecheck for "+tokenString);
+            return action(db, token);
         }
     }
 }
