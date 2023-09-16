@@ -134,6 +134,7 @@ namespace NSK_WebAPI.DB
                 .Where(p => p.TokenGroupId == singleToken.TokenGroupId)
                 .Select(p => p.Permission).ToList());
 
+            result = true;
             for(var i = 0; i < permissions.Length; i++)
             {
                 result = result && dbPermissions.Contains(permissions[i]);
