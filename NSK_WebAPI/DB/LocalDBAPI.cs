@@ -10,7 +10,7 @@ public static class LocalDBAPI //Лучше переименовать
     {
         var db = new DatabaseContext();
         db.Users.Add(user);
-        db.Tokens.Add(new Token { User = user, TokenString = GenerateToken(), TokenGroup = db.TokenGroups.First()});//TODO сделаем потом группу для юзеров и куда-нибудь выведем...
+        db.Tokens.Add(new Token { User = user, TokenString = GenerateToken(), TokenGroup = db.TokenGroups.First(g => g.TokenGroupId == 2) });
         db.SaveChanges();
         db.DisposeAsync();
     }
@@ -18,7 +18,7 @@ public static class LocalDBAPI //Лучше переименовать
     private static Random _random = new Random();
     static string GenerateToken()
     {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*";
+        const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*+-_=~";
         return new string(Enumerable.Repeat(chars, 12)
             .Select(s => s[_random.Next(s.Length)]).ToArray());
     }

@@ -28,6 +28,10 @@ namespace NSK_WebAPI.DB
                 
                 var groupAdmin = new TokenGroup { TokenGroupTitle = "Admin" };
                 db.TokenGroups.Add(groupAdmin);
+
+                var groupUser = new TokenGroup { TokenGroupTitle = "User" };
+                db.TokenGroups.Add(groupUser);
+
                 db.TokenGroupPermissions.Add(new TokenGroupPermission {TokenGroup = groupAdmin, Permission = Permissions.PERM_ADMIN});
                 db.Tokens.Add(new Token {TokenString = "admin", TokenGroup = groupAdmin});
 

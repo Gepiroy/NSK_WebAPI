@@ -4,6 +4,8 @@ using NSK_WebAPI.DB.DBObjects;
 using NSK_WebAPI.DB.RequestObjects;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace NSK_WebAPI.Controllers
 {
@@ -78,8 +80,7 @@ namespace NSK_WebAPI.Controllers
                     user.PhoneNumber = data.PhoneOrMail; //TODO нормальный перешифровыватель в нужные форматы
                     //TODO отсылание СМС-подтверждения
                 }
-                db.Users.Add(user);
-                db.SaveChanges();
+                LocalDBAPI.RegisterUser(user);
             });
             
             if (result.Length > 0) return Conflict(result);
@@ -101,12 +102,12 @@ namespace NSK_WebAPI.Controllers
             return new ActionResult<string>(tokenString);
         }
         [HttpPost, Route("UpdateUser/{userId}")]
-        public ActionResult UpdateUser(int userId, [FromBody]RequestUpdateUser data)
+        public ActionResult UpdateUser(int userId, [FromBody]RequestUpdateUser data, [FromHeader(Name = "Token")] string tokenString)
         {
-            string result = "";
-            
-            DatabaseContext.Execute(db =>
+            return DatabaseContext.Execute((db, token) =>
             {
+                if(!Permissions.CanWriteUser(db, userId, token))return Forbid();
+
                 User user = db.Users.First(u => u.UserId == userId);
 
                 if(data.FirstName is not null) user.FirstName = data.FirstName;
@@ -116,33 +117,25 @@ namespace NSK_WebAPI.Controllers
                 if(data.Email is not null) user.Email = data.Email;
                 if(data.PhoneNumber is not null) user.PhoneNumber = data.PhoneNumber;
 
-                //TODO probably there is some way to do this automatically. Reflection?
-
-                // Можно. Следи за руками
-                //var fields = data.GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
-                //foreach(var field in fields)
-                //{
-                //    if(field.GetValue(data) != null)
-                //    {
-                //        var desiredField = user.GetType().GetField(field.Name, BindingFlags.Instance | BindingFlags.NonPublic);
-                //        if(desiredField != null)
-                //        {
-                //            desiredField.SetValue(user, field.GetValue(data));
-                //        }
-                //    }
-                //}
-                // Между делом жаловался на нулл дереференс, ну а мне-то шо?
-
                 db.SaveChanges();
-            });
-            
-            if (result.Length > 0) return Conflict(result);
-            return Ok();
+                return Ok();
+            }, tokenString);
         }
 
         public static string MakeHash(string password)
         {
-            return password; //TODO hash-функцию завезём позже. И соль в структуру БД... Хотя смысла в этом вижу мало.
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(password));
+
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+
+                return builder.ToString();
+            }
         }
     }
 }

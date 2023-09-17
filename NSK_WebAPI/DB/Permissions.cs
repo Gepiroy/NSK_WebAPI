@@ -12,6 +12,11 @@ public static class Permissions
         return CheckPermissions(db, token, "GetUsers");
     }
 
+    public static bool CanWriteUser(DatabaseContext db, int userId, Token token)
+    {
+        return CanGetUser(db, userId, token);
+    }
+
     public static Token? TokenFromString(DatabaseContext db, string tokenString)
     {
         if(string.IsNullOrWhiteSpace(tokenString)) return null;
