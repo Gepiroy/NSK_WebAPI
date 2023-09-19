@@ -15,6 +15,8 @@ namespace NSK_WebAPI.DB
     {
         public static void Init()
         {
+            LocalDBAPI.LoadConnectionString();
+            
             var db = new DatabaseContext();
 #if DEBUG
             db.Database.EnsureDeleted();
@@ -58,33 +60,14 @@ namespace NSK_WebAPI.DB
             base.OnModelCreating(modelBuilder);
             
             // Value generators
-
             modelBuilder.Entity<User>()
                 .Property(user => user.UserId)
                 .ValueGeneratedOnAdd();
-
-            /*modelBuilder.Entity<Travel>()
-                .Property(p => p.TravelId)
-                .ValueGeneratedOnAdd();
-
-            modelBuilder.Entity<Transportation>()
-                .Property(p => p.TransportationId)
-                .ValueGeneratedOnAdd();
-
-            modelBuilder.Entity<Auto>()
-                .Property(p => p.AutoId)
-                .ValueGeneratedOnAdd();*/
-            
-            //modelBuilder.Entity<Token>()
-            //    .HasOne(token => token.TokenGroup)
-            //    .WithMany()
-            //    .HasForeignKey(token => token.TokenGroupTitle)
-            //    .OnDelete(DeleteBehavior.Restrict);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=usersdb;Username=postgres;Password=");
+            optionsBuilder.UseNpgsql(LocalDBAPI.ConnectionString);
         }
 
         public static void Execute(Action<DatabaseContext> action)
@@ -106,7 +89,6 @@ namespace NSK_WebAPI.DB
         public static T ExecuteAndReturn<T>(Func<DatabaseContext, T> action)
         {
             var db = new DatabaseContext();
-            //db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
             return action(db);
         }
         public static ActionResult<T> ExecuteAndReturn<T>(Func<DatabaseContext, Token, ActionResult<T>> action, string tokenString, params string[] permissions)
